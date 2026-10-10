@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>فاحص يوزرات TikTok</title>
+<style>
+:root{color-scheme:dark;--bg:#08090d;--panel:#11131a;--line:#292d39;--muted:#9ba2b2;--blue:#287fff;--green:#39d98a;--red:#ff6b7b;--amber:#f2c66d}
+*{box-sizing:border-box}body{margin:0;padding:18px;background:var(--bg);color:#f5f6fa;font-family:system-ui,Tahoma,sans-serif}
+main{max-width:850px;margin:auto}.head{display:flex;gap:12px;align-items:center;margin:8px 0 18px}.logo{background:#171b25;border:1px solid var(--line);border-radius:14px;padding:12px;font-size:24px}.head h1{font-size:21px;margin:0}.muted{color:var(--muted);font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:16px;margin:14px 0}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field label{display:block;font-size:13px;margin-bottom:7px;color:#cdd2df}
+select,textarea{width:100%;background:#090b11;border:1px solid #343847;color:#fff;border-radius:10px;padding:11px;font:inherit}
+textarea{min-height:80px;direction:ltr;text-align:left}.buttons{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+button{border:0;border-radius:10px;padding:11px 14px;font:600 14px system-ui;cursor:pointer}.primary{background:var(--blue);color:white}.secondary{background:#272c38;color:#f4f6fb}
+.note{font-size:12px;line-height:1.8;color:var(--muted)}.bar{height:6px;background:#242936;border-radius:9px;overflow:hidden;margin:12px 0}.bar span{display:block;height:100%;width:0;background:var(--blue);transition:width .2s}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.pill{border:1px solid #303544;background:#191d27;border-radius:99px;padding:7px 10px;font-size:12px}
+.list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.item{display:flex;align-items:center;gap:8px;background:#090b10;border:1px solid #292d39;border-radius:10px;padding:10px;min-width:0}.name{direction:ltr;text-align:left;font:600 15px ui-monospace,monospace;flex:1}.status{font-size:11px;white-space:nowrap}.available{color:var(--green)}.taken{color:var(--red)}.unknown{color:var(--amber)}.tiny{font-size:11px;padding:6px 8px;background:#252a36;color:#eee}
+@media(max-width:540px){.controls,.list{grid-template-columns:1fr}body{padding:12px}}
+</style></head>
+<body><main>
+<header class="head"><div class="logo">＠</div><div><h1>فاحص يوزرات TikTok</h1><div class="muted">فحص عبر خادم محلي — النتائج قد تتأثر بقيود تيك توك</div></div></header>
+<section class="panel">
+<div class="controls">
+<div class="field"><label for="style">نوع اليوزرات</label><select id="style"><option value="mixed">رباعي مميز (حروف وأرقام)</option><option value="letters">حروف فقط</option><option value="digits">أرقام فقط</option></select></div>
+<div class="field"><label for="count">عدد الأسماء</label><select id="count"><option>50</option><option>25</option><option>10</option></select></div>
+</div>
+<div class="buttons"><button class="primary" id="generate">توليد الأسماء</button><button class="secondary" id="check">فحص الأسماء</button><button class="secondary" id="copy">نسخ القائمة</button></div>
+<p class="note">تنبيه: لا توجد واجهة رسمية عامة من تيك توك مخصصة لفحص توفر اسم مستخدم. هذا النموذج يقرأ بيانات صفحة الملف العامة عبر خادم محلي غير رسمي، لذلك قد تظهر «تعذّر التحقق». لا تستخدمه لتجاوز الحظر أو إرسال طلبات متكررة.</p>
+<div class="bar"><span id="progress"></span></div><div class="muted" id="message">ابدأ بتوليد الأسماء أو ألصق قائمة في المربع أدناه.</div>
+<label class="muted" for="manual">اختياري: افحص أسماء محددة (اسم بكل سطر، بحد أقصى 50)</label><textarea id="manual" placeholder="abcd&#10;x7p2&#10;mn4q"></textarea>
+</section>
+<section class="panel">
+<div class="stats"><span class="pill" id="total">النتائج: 0</span><span class="pill" id="avail">متاح محتمل: 0</span><span class="pill" id="taken">غير متاح: 0</span><span class="pill" id="unknown">تعذّر التحقق: 0</span></div>
+<div class="list" id="list"><div class="muted">لا توجد نتائج بعد.</div></div>
+</section>
+<p class="note">«متاح محتمل» ليس ضمانًا نهائيًا؛ لا يمكن تأكيد إمكانية حجز الاسم إلا من خلال تيك توك نفسه عند محاولة تغيير اسم المستخدم.</p>
+</main>
+<script>
+const alphabet='abcdefghijklmnopqrstuvwxyz0123456789';let names=[],results=[];
+const $=id=>document.getElementById(id);
+function randomName(style){const pool=style==='letters'?'abcdefghijklmnopqrstuvwxyz':style==='digits'?'0123456789':alphabet;let s='';for(let i=0;i<4;i++)s+=pool[Math.floor(Math.random()*pool.length)];return s}
+function render(){
+ const list=$('list');list.replaceChildren();
+ if(!results.length){list.textContent='لا توجد نتائج بعد.';list.className='list muted';}
+ results.forEach((r,i)=>{
+  const item=document.createElement('div');item.className='item';
+  const n=document.createElement('span');n.className='name';n.textContent=r.username;
+  const s=document.createElement('span');s.className='status '+(r.status==='likely_available'?'available':r.status==='taken'?'taken':'unknown');
+  s.textContent=r.status==='likely_available'?'متاح محتمل':r.status==='taken'?'غير متاح':'تعذّر التحقق';
+  const b=document.createElement('button');b.className='tiny';b.textContent='فتح';b.onclick=()=>window.open('https://www.tiktok.com/@'+encodeURIComponent(r.username),'_blank','noopener');
+  item.append(n,s,b);list.append(item);
+ });
+ $('total').textContent='النتائج: '+results.length;
+ $('avail').textContent='متاح محتمل: '+results.filter(x=>x.status==='likely_available').length;
+ $('taken').textContent='غير متاح: '+results.filter(x=>x.status==='taken').length;
+ $('unknown').textContent='تعذّر التحقق: '+results.filter(x=>x.status==='unknown').length;
+}
+$('generate').onclick=()=>{const style=$('style').value,count=+$('count').value,set=new Set();while(set.size<count)set.add(randomName(style));names=[...set];$('manual').value=names.join('\n');results=names.map(username=>({username,status:'unknown'}));render();$('message').textContent='تم التوليد فقط. اضغط «فحص الأسماء» لبدء الفحص.';$('progress').style.width='0%';};
+$('check').onclick=async()=>{
+ let source=$('manual').value.split(/\s+/).map(x=>x.trim().replace(/^@/,'')).filter(Boolean);
+ source=[...new Set(source)].slice(0,50);
+ if(!source.length){$('message').textContent='ولّد الأسماء أو ألصق أسماء أولاً.';return;}
+ if(source.some(x=>!/^[a-zA-Z0-9._]{2,24}$/.test(x))){$('message').textContent='بعض الأسماء تحتوي رموزًا غير مسموحة أو طولًا غير مناسب. استخدم حروفًا وأرقامًا ونقطة أو شرطة سفلية.';return;}
+ results=source.map(username=>({username,status:'unknown'}));render();
+ for(let i=0;i<source.length;i++){
+  $('message').textContent=`جارٍ فحص ${i+1} من ${source.length}…`;
+  try{
+   const response=await fetch('/api/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:source[i]})});
+   if(!response.ok)throw new Error('server');
+   const data=await response.json();results[i]={username:source[i],status:data.status||'unknown'};
+  }catch(e){results[i]={username:source[i],status:'unknown'};}
+  render();$('progress').style.width=Math.round((i+1)/source.length*100)+'%';
+  if(i<source.length-1)await new Promise(resolve=>setTimeout(resolve,2200));
+ }
+ $('message').textContent='انتهى الفحص. أي نتيجة غير حاسمة ستظهر «تعذّر التحقق».';
+};
+$('copy').onclick=async()=>{const text=(results.length?results.map(r=>r.username+'\t'+r.status):names).join('\n');try{await navigator.clipboard.writeText(text);$('message').textContent='تم نسخ القائمة.'}catch(e){$('message').textContent=text}};
+</script></body></html>
